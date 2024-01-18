@@ -8,7 +8,6 @@ import os
 from datetime import datetime
 from tkinter import ttk, messagebox
 from PIL import ImageGrab
-from line_profiler_pycharm import profile
 from matplotlib.figure import Figure
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 from matplotlib.gridspec import GridSpec
@@ -54,7 +53,6 @@ ma: JMA = None
 start_btn_text = "Start (Space / Enter)"
 
 # Re-computes frequencies and updates chart axes with latest data
-@profile
 def update_plot():
     """Update the plot with the latest data."""
     global timestamps, frequencies, ma
