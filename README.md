@@ -12,7 +12,7 @@ Or just click around and watch the numbers change.
 
 - **Real-time Frequency Tracking:** Plots tap frequency over time and provides a visual representation of the tapping pattern.
 
-- **Moving Average:** Includes a moving average (MA) calculation for a smoother representation and trend identification. 
+- **Moving Average:** Uses jurik moving average calculation for trend identification. 
 
 - **Saving:** Save plot images and data to file. Wow!
 
@@ -33,5 +33,6 @@ Or just click around and watch the numbers change.
 
 ## To-Do
 
-- [ ] FPS is capped around 4 due to matplotlib's slowness. Switching to their animation lib or using a different graphing library would be a good idea.
+- [ ] During matplotlib's slow update, button-press timestamps aren't recorded at the right time. Need some kind of multithreaded approach...
+- [ ] FPS is capped around 4 due to matplotlib's slowness. Switching to a different graphing library would be a good idea.
 - [ ] Advanced signal processing - filters, FFT, etc
