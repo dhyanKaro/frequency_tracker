@@ -1,9 +1,6 @@
 import matplotlib
 
-from JMA import JMA
-
 matplotlib.use("TkAgg")
-
 import os
 from datetime import datetime
 from tkinter import ttk, messagebox
@@ -20,6 +17,8 @@ from matplotlib.ticker import StrMethodFormatter
 
 import matplotlib.style as mplstyle
 mplstyle.use('fast')
+
+from JMA import JMA
 
 # Define color palette and theme constants (Darcula theme)
 background_color = '#282a36'
@@ -41,7 +40,6 @@ plt.rcParams.update({
     'lines.markerfacecolor': markerfacecolor,
 })
 customtkinter.set_default_color_theme("dark-blue")
-
 
 # Stores time stamp for each tap
 timestamps = []
@@ -112,11 +110,9 @@ def update_plot():
     # Add gridlines to second subplot
     ax2.grid(True)
 
-
-
     ax.relim()
     ax.autoscale_view()
-    ax.set_xlim(0, max(ts)*1.05)
+    ax.set_xlim(0, max(ts) * 1.05)
     # Update the canvas
     canvas.draw_idle()
 
@@ -164,6 +160,7 @@ def reset_chart(event=None):
     root.after(1, canvas.draw_idle())
 
     start_button.configure(text=start_btn_text)
+
 
 def undo(event=None):
     try:
@@ -235,7 +232,8 @@ fig.tight_layout(rect=[0.02, 0, 0.965, 1])
 fig.subplots_adjust(hspace=0)
 
 # Create line objects
-line1, = ax.plot([], [], marker='o', linestyle='-', linewidth=0.5, color='white', markerfacecolor='white', label='ƒ (Hz)')
+line1, = ax.plot([], [], marker='o', linestyle='-', linewidth=0.5, color='white', markerfacecolor='white',
+                 label='ƒ (Hz)')
 line2, = ax.plot([], [], color='r', label="MA")
 line3 = ax.axhline(y=0, color='g', linestyle='--', label='Avg')
 line3.set_alpha(0)
@@ -245,6 +243,7 @@ bar1 = ax2.bar([], [])
 mplcursors.cursor(ax, hover=2)
 mplcursors.cursor(ax2, hover=2)
 
+
 # Secondary axis
 def one_over(x):
     """Vectorized 1/x, treating x==0 manually"""
@@ -253,6 +252,8 @@ def one_over(x):
     x[near_zero] = np.inf
     x[~near_zero] = 1 / x[~near_zero]
     return x
+
+
 inverse = one_over  # the function "1/x" is its own inverse
 secax = ax.secondary_yaxis('right', functions=(one_over, inverse))
 secax.set_ylabel('Period (s)')
