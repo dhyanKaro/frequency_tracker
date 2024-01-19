@@ -51,7 +51,7 @@ ma: JMA = None
 start_btn_text = "Start (Space / Enter)"
 
 # Re-computes frequencies and updates chart axes with latest data
-def update_plot():
+def update_plot(new_point=True):
     """Update the plot with the latest data."""
     global timestamps, frequencies, ma
     # Check if we have at least two data points to calculate frequency
@@ -70,10 +70,11 @@ def update_plot():
     line1.set_data(ts, frequencies)
 
     # Calculate and plot moving average (JMA)
-    if ma is None:
-        ma = JMA(frequencies[0], _length=8, _phase=0)
-    else:
-        ma.update(frequencies[-1])
+    if new_point:  # Only add to the moving-average values if this is a normal update (not undo)
+        if ma is None:
+            ma = JMA(frequencies[0], _length=8, _phase=0)
+        else:
+            ma.update(frequencies[-1])
     ma_get_series = ma.get_series()
     line2.set_data(ts, ma_get_series)
     line2.set_label(f"MA:  {(float(ma_get_series[-1])):.3f}")
@@ -169,6 +170,7 @@ def undo(event=None):
         # todo: button flash not displaying right... sometimes...
         flash_button(start_button)
         flash_button(reset_button)
+        root.after(1, update_plot(new_point=False))
     except IndexError:
         print('List is empty')
 
