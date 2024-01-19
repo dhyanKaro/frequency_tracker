@@ -112,9 +112,7 @@ def update_plot():
     # Add gridlines to second subplot
     ax2.grid(True)
 
-    # Cursor for the annotations
-    mplcursors.cursor(ax, hover=2)
-    mplcursors.cursor(ax2, hover=2)
+
 
     ax.relim()
     ax.autoscale_view()
@@ -242,6 +240,10 @@ line2, = ax.plot([], [], color='r', label="MA")
 line3 = ax.axhline(y=0, color='g', linestyle='--', label='Avg')
 line3.set_alpha(0)
 bar1 = ax2.bar([], [])
+
+# Cursor for the annotations
+mplcursors.cursor(ax, hover=2)
+mplcursors.cursor(ax2, hover=2)
 
 # Secondary axis
 def one_over(x):
