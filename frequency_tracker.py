@@ -240,7 +240,7 @@ line3.set_alpha(0)
 bar1 = ax2.bar([], [])
 
 # Cursor for the annotations
-mplcursors.cursor(ax, hover=2)
+mplcursors.cursor(ax, hover=2)  #todo: fix MA line only showing latest value in the annotation
 mplcursors.cursor(ax2, hover=2)
 
 
