@@ -1,6 +1,7 @@
 import matplotlib
 
 matplotlib.use("TkAgg")
+matplotlib.rcParams['axes.linewidth'] = 1
 import os
 from datetime import datetime
 from tkinter import ttk, messagebox
@@ -13,9 +14,9 @@ import numpy as np
 import mplcursors
 import customtkinter
 import matplotlib.pyplot as plt
-from matplotlib.ticker import StrMethodFormatter
-
+from matplotlib.ticker import FuncFormatter
 import matplotlib.style as mplstyle
+
 mplstyle.use('fast')
 
 from JMA import JMA
@@ -26,6 +27,8 @@ text_color = '#f8f8f2'
 grid_color = '#44475a'
 line_color = '#1C5489'
 markerfacecolor = '#ff79c6'
+orange = '#FFB86C'
+cyan = '#8BE9FD'
 
 # Update the default parameters
 plt.rcParams.update({
@@ -49,6 +52,7 @@ frequencies = []
 ma: JMA = None
 
 start_btn_text = "Start (Space / Enter)"
+
 
 # Re-computes frequencies and updates chart axes with latest data
 def update_plot(new_point=True):
@@ -85,21 +89,7 @@ def update_plot(new_point=True):
     line3.set_label(f'Avg: {mean:.3f}')
     line3.set_alpha(1)
 
-    ax.legend()
-    ax.set_ylabel('Frequency (Hz)')
-    ax.grid(True)
-
-    # Auto-scale the plot (y-axis)
-    ax.relim()
-    ax.autoscale_view()
-
-    # Update the secondary y-axis
-    primary_ticks = ax.get_yticks()
-    # Calculate the 1/f values for the y-tick locations
-    secondary_ticks = one_over(primary_ticks)
-    # Set the y-tick locations on the secondary y-axis
-    secax.set_yticks(secondary_ticks)
-    secax.yaxis.set_major_formatter(StrMethodFormatter('{x:.2g}'))
+    ax1.legend()
 
     # Plot bar chart of time intervals on second subplot
     global bar1
@@ -108,12 +98,17 @@ def update_plot(new_point=True):
     ax2.set_ylabel('Time Delta (seconds)')
     ax2.set_xlabel('Time (seconds)')
 
-    # Add gridlines to second subplot
-    ax2.grid(True)
+    # Rescale
+    ax1.set_xlim(0, max(ts) * 1.05)
+    ax1.set_ylim(min(frequencies) * 0.95, max(frequencies) * 1.05)
 
-    ax.relim()
-    ax.autoscale_view()
-    ax.set_xlim(0, max(ts) * 1.05)
+    # todo: get the tick labels and locators less messed up... matplotlib...
+    # Tick labels format
+    ax1.yaxis.set_major_formatter(formatter)
+    ax1.yaxis.set_minor_formatter(formatter)
+    sec_ax.yaxis.set_major_formatter(formatter)
+    sec_ax.yaxis.set_minor_formatter(formatter)
+
     # Update the canvas
     canvas.draw_idle()
 
@@ -127,13 +122,9 @@ def flash_button(btn):
 # Function to handle button click
 def button_click(event=None):
     flash_button(start_button)
-
     start_button.configure(text="Click (or Space / Enter)")
-    # Record the time when the button is pressed
-    timestamps.append(time())
-
-    # Update the plot with the new data
-    root.after(1, update_plot)
+    timestamps.append(time())  # Record the time when the button is pressed
+    root.after(1, update_plot)  # Update the plot with the new data
 
 
 # Function to handle reset button click
@@ -154,8 +145,10 @@ def reset_chart(event=None):
     bar1.remove()
     bar1 = ax2.bar([], [])
 
-    # Set the x-axis limits
-    ax.set_xlim(left=0)
+    ax1.set_xlim(left=0)
+
+    ax2.relim()
+    ax2.autoscale_view()
 
     # Update the canvas to clear the chart
     root.after(1, canvas.draw_idle())
@@ -224,29 +217,34 @@ width = 10
 fig = Figure(figsize=(width, width / 1.618))
 gs = GridSpec(nrows=2, ncols=1, figure=fig, height_ratios=[1.618, 1])
 
-ax = fig.add_subplot(gs[0])
-ax2 = fig.add_subplot(gs[1], sharex=ax)
+ax1 = fig.add_subplot(gs[0])
+ax2 = fig.add_subplot(gs[1], sharex=ax1)
 
-ax.set_title("Frequency Tracker")
-ax.set_xlim(left=0)
-ax.grid(True)
+ax1.set_title("Frequency Tracker")
+ax1.set_ylabel('Frequency (Hz)')
+ax1.set_xlim(left=0)
+ax1.grid(True)
+ax2.grid(True)
+plt.setp(ax1.get_xticklabels(), visible=False)
+ax1.set_yscale('log')
+# Layout
 fig.tight_layout(rect=[0.02, 0, 0.965, 1])
 fig.subplots_adjust(hspace=0)
 
 # Create line objects
-line1, = ax.plot([], [], marker='o', linestyle='-', linewidth=0.5, color='white', markerfacecolor='white',
-                 label='ƒ (Hz)')
-line2, = ax.plot([], [], color='r', label="MA")
-line3 = ax.axhline(y=0, color='g', linestyle='--', label='Avg')
+line1, = ax1.plot([], [], marker='o', linestyle='-', linewidth=0.5, color='white', markerfacecolor='white',
+                  label='ƒ (Hz)')
+line2, = ax1.plot([], [], color='r', label="MA")
+line3 = ax1.axhline(y=0, color='g', linestyle='--', label='Avg')
 line3.set_alpha(0)
 bar1 = ax2.bar([], [])
 
 # Cursor for the annotations
-mplcursors.cursor(ax, hover=2)  #todo: fix MA line only showing latest value in the annotation
+mplcursors.cursor(ax1, hover=2)  # todo: custom annotation text
 mplcursors.cursor(ax2, hover=2)
 
 
-# Secondary axis
+# Secondary y-axis
 def one_over(x):
     """Vectorized 1/x, treating x==0 manually"""
     x = np.array(x, float)
@@ -257,9 +255,16 @@ def one_over(x):
 
 
 inverse = one_over  # the function "1/x" is its own inverse
-secax = ax.secondary_yaxis('right', functions=(one_over, inverse))
-secax.set_ylabel('Period (s)')
+sec_ax = ax1.secondary_yaxis('right', functions=(one_over, inverse))
+sec_ax.set_ylabel('Period (s)')
+sec_ax.set_yticks(one_over(ax1.get_yticks()))
 
+# Ticks and labels
+formatter = FuncFormatter(lambda x, _: '' if x <= 0 else f'{round(x) if abs(x - round(x)) < 1e-10 else x:.10g}')
+ax1.yaxis.set_major_formatter(formatter)
+sec_ax.yaxis.set_major_formatter(formatter)
+
+# GUI Setup
 # Create a canvas to display the plot
 canvas = FigureCanvasTkAgg(fig, master=plot_frame)
 canvas.get_tk_widget().pack(side="top", fill='both', expand=True)
