@@ -1,5 +1,4 @@
 import matplotlib
-
 matplotlib.use("TkAgg")
 matplotlib.rcParams['axes.linewidth'] = 1
 import os
@@ -48,8 +47,11 @@ customtkinter.set_default_color_theme("dark-blue")
 timestamps = []
 # Computed tap frequencies
 frequencies = []
+# max frequency limit
+max_frequency = 5
 # Moving average
 ma: JMA = None
+ma_length = 8
 
 start_btn_text = "Start (Space / Enter)"
 
@@ -64,10 +66,8 @@ def update_plot(new_point=True):
     # Translate and align all timestamps starting from 0
     time_intervals = [timestamps[i] - timestamps[i - 1] for i in range(1, len(timestamps))]
     frequencies = [1 / delta for delta in time_intervals]
-    # Filter high values
-    #   I think 10 times a second is the fastest anyone can tap
-    #   and anything higher is usually a glitch from the matplotlib ui update lag
-    frequencies = [min(f, 10) for f in frequencies]
+    # Filter high values (which occur due to a glitch from the matplotlib ui update lag)
+    frequencies = [min(f, max_frequency) for f in frequencies]
 
     # Plot frequency data
     ts = [t - timestamps[0] for t in timestamps[1:]]  # Get it in terms of just seconds elapsed
@@ -76,7 +76,7 @@ def update_plot(new_point=True):
     # Calculate and plot moving average (JMA)
     if new_point:  # Only add to the moving-average values if this is a normal update (not undo)
         if ma is None:
-            ma = JMA(frequencies[0], _length=8, _phase=0)
+            ma = JMA(frequencies[0], _length=ma_length, _phase=0)  # Use the updated ma_length
         else:
             ma.update(frequencies[-1])
     ma_get_series = ma.get_series()
@@ -124,7 +124,7 @@ def button_click(event=None):
     flash_button(start_button)
     start_button.configure(text="Click (or Space / Enter)")
     timestamps.append(time())  # Record the time when the button is pressed
-    root.after(1, update_plot)  # Update the plot with the new data
+    update_plot()
 
 
 # Function to handle reset button click
@@ -201,6 +201,46 @@ def save_plot(event=None):
 
     messagebox.showinfo("Plot Saved", f"The plot has been saved to: {os.path.abspath(save_dir)}")
 
+def open_settings_dialog():
+    def save_settings(ma_length_entry_value, max_freq_entry_value):
+        global ma_length, max_frequency
+        try:
+            ma_length = int(ma_length_entry_value)
+            max_freq_entry_value = float(max_freq_entry_value)
+            # Update the JMA instance
+            if ma is not None:
+                ma._length = ma_length
+            # Update the global variable for max frequency
+            max_frequency = max_freq_entry_value
+            settings_window.destroy()
+        except ValueError:
+            messagebox.showerror("Error", "Please enter valid numeric values.")
+
+    global ma_length, max_frequency
+
+    settings_window = customtkinter.CTkToplevel(root)
+    settings_window.title("Settings")
+
+    # MA Length
+    ma_length_label = customtkinter.CTkLabel(settings_window, text="MA Length:")
+    ma_length_label.grid(row=0, column=0, padx=10, pady=10)
+    ma_length_entry = customtkinter.CTkEntry(settings_window)
+    ma_length_entry.grid(row=0, column=1, padx=10, pady=10)
+    ma_length_entry.insert(0, str(ma_length))  # Default/current value
+
+    # Max Frequency
+    max_freq_label = customtkinter.CTkLabel(settings_window, text="Max Frequency (Hz):")
+    max_freq_label.grid(row=1, column=0, padx=10, pady=10)
+    max_freq_entry = customtkinter.CTkEntry(settings_window)
+    max_freq_entry.grid(row=1, column=1, padx=10, pady=10)
+    max_freq_entry.insert(0, max_frequency)
+
+    # Save Button
+    save_settings_btn = customtkinter.CTkButton(settings_window, text="Save", command=lambda: save_settings(ma_length_entry.get(), max_freq_entry.get()))
+    save_settings_btn.grid(row=2, column=0, columnspan=2, pady=10)
+
+    settings_window.grab_set()  # Modal window
+
 
 # Create the main window
 root = customtkinter.CTk()
@@ -220,7 +260,6 @@ gs = GridSpec(nrows=2, ncols=1, figure=fig, height_ratios=[1.618, 1])
 ax1 = fig.add_subplot(gs[0])
 ax2 = fig.add_subplot(gs[1], sharex=ax1)
 
-ax1.set_title("Frequency Tracker")
 ax1.set_ylabel('Frequency (Hz)')
 ax1.set_xlim(left=0)
 ax1.grid(True)
@@ -287,6 +326,10 @@ reset_button.grid(row=0, column=0, sticky='nsew', padx=10)
 # save button
 save_button = customtkinter.CTkButton(button_frame, text="💾", width=3, command=save_plot)  # What's a floppy?
 save_button.grid(row=0, column=2, sticky='nsew', padx=10)
+
+# Settings button
+settings_button = customtkinter.CTkButton(button_frame, text="⚙️", width=3, command=open_settings_dialog)
+settings_button.grid(row=0, column=3, sticky='nsew', padx=10)
 
 # Update column weights for button frame
 button_frame.columnconfigure(2, weight=82)
