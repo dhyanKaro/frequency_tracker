@@ -49,6 +49,8 @@ timestamps = []
 frequencies = []
 # max frequency limit
 max_frequency = 5
+# min frequency limit
+min_frequency = 0.025
 # Moving average
 ma: JMA = None
 ma_length = 8
@@ -66,8 +68,8 @@ def update_plot(new_point=True):
     # Translate and align all timestamps starting from 0
     time_intervals = [timestamps[i] - timestamps[i - 1] for i in range(1, len(timestamps))]
     frequencies = [1 / delta for delta in time_intervals]
-    # Filter high values (which occur due to a glitch from the matplotlib ui update lag)
-    frequencies = [min(f, max_frequency) for f in frequencies]
+    # Filter out frequencies lower than min_frequency and higher than max_frequency
+    frequencies = [max(min(f, max_frequency), min_frequency) for f in frequencies]
 
     # Plot frequency data
     ts = [t - timestamps[0] for t in timestamps[1:]]  # Get it in terms of just seconds elapsed
@@ -202,21 +204,23 @@ def save_plot(event=None):
     messagebox.showinfo("Plot Saved", f"The plot has been saved to: {os.path.abspath(save_dir)}")
 
 def open_settings_dialog():
-    def save_settings(ma_length_entry_value, max_freq_entry_value):
-        global ma_length, max_frequency
+    def save_settings(ma_length_entry_value, max_freq_entry_value, min_freq_entry_value):
+        global ma_length, max_frequency, min_frequency
         try:
             ma_length = int(ma_length_entry_value)
             max_freq_entry_value = float(max_freq_entry_value)
+            min_freq_entry_value = float(min_freq_entry_value)
             # Update the JMA instance
             if ma is not None:
                 ma._length = ma_length
             # Update the global variable for max frequency
             max_frequency = max_freq_entry_value
+            min_frequency = min_freq_entry_value
             settings_window.destroy()
         except ValueError:
             messagebox.showerror("Error", "Please enter valid numeric values.")
 
-    global ma_length, max_frequency
+    global ma_length, max_frequency, min_frequency
 
     settings_window = customtkinter.CTkToplevel(root)
     settings_window.title("Settings")
@@ -235,9 +239,17 @@ def open_settings_dialog():
     max_freq_entry.grid(row=1, column=1, padx=10, pady=10)
     max_freq_entry.insert(0, max_frequency)
 
+    # Min Frequency
+    min_freq_label = customtkinter.CTkLabel(settings_window, text="Min Frequency (Hz):")
+    min_freq_label.grid(row=2, column=0, padx=10, pady=10)
+    min_freq_entry = customtkinter.CTkEntry(settings_window)
+    min_freq_entry.grid(row=2, column=1, padx=10, pady=10)
+    min_freq_entry.insert(0, str(min_frequency))  # Default/current value
+
     # Save Button
-    save_settings_btn = customtkinter.CTkButton(settings_window, text="Save", command=lambda: save_settings(ma_length_entry.get(), max_freq_entry.get()))
-    save_settings_btn.grid(row=2, column=0, columnspan=2, pady=10)
+    save_settings_btn = customtkinter.CTkButton(settings_window, text="Save",
+        command=lambda: save_settings(ma_length_entry.get(), max_freq_entry.get(), min_freq_entry.get()))
+    save_settings_btn.grid(row=3, column=0, columnspan=2, pady=10)
 
     settings_window.grab_set()  # Modal window
 
@@ -302,6 +314,13 @@ sec_ax.set_yticks(one_over(ax1.get_yticks()))
 formatter = FuncFormatter(lambda x, _: '' if x <= 0 else f'{round(x) if abs(x - round(x)) < 1e-10 else x:.10g}')
 ax1.yaxis.set_major_formatter(formatter)
 sec_ax.yaxis.set_major_formatter(formatter)
+
+# Frequency bands
+try:
+    from freq_bands import get_freq_bands
+    for band in get_freq_bands(fd_range=(-7, 2)):
+        ax1.axhspan(band['lower_limit_1'], band['upper_limit_1'], facecolor=orange, alpha=0.20)
+except: ...
 
 # GUI Setup
 # Create a canvas to display the plot
